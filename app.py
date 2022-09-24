@@ -1,3 +1,5 @@
+import json
+
 from tensorflow.keras.models import load_model
 from tensorflow.keras.models import model_from_json
 import numpy as np
@@ -11,23 +13,26 @@ from PIL import Image
 
 import flask
 
+from PredictionResponse import PredictionResponse
+
 app = flask.Flask(__name__)
 
 
-# define a predict function as an endpoint
-@app.route("/predict", methods=["GET", "POST"])
-def predict():
-    data = {"success": False}
-    # get the request parameters
-    params = flask.request.json
+def make_predict_response(classifier, probability):
+    response = PredictionResponse(classifier, probability)
+    return response
 
+
+
+# define a predict function as an endpoint
+@app.route("/predict", methods=['POST'])
+def predict():
     config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth = True
-    sess = tf.compat.v1.Session(config=config)
 
     #used for passing arguments to script
-    architecture = "static/handwritten_model_v3_color.json"
-    weights = "static/handwritten_model_v3_color.h5"
+    architecture = "static/photo_gan2.json"
+    weights = "static/photo_gan2.h5"
     classes = "static/classes_all.txt"
     img_path = "static/beth_0005.png"
 
@@ -42,8 +47,11 @@ def predict():
     classes = eval(open(classes, 'r').read())
 
     #opening image for classification
-    img = Image.open(img_path)
-    img = img.resize((28, 28), Image.BILINEAR)
+    #img = Image.open(img_path)
+
+    file = flask.request.files['inputFile']
+    img = Image.open(file.stream)
+    img = img.resize((100, 100), Image.BILINEAR)
     img = np.array(img)
     print(img.shape)
     #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -55,15 +63,26 @@ def predict():
     img = img.reshape((1, img.shape[0], img.shape[1], img.shape[2]))
     img = img.astype('float32') / 255
 
-
-
-
     #running prediction on test image
     preds = loaded_model.predict(img)
+
     print("Class is: " + classes[np.argmax(preds)])
     print("Certainty is: " + str(preds[0][np.argmax(preds)]))
 
+    response = app.response_class(
+        response=json.dumps(make_predict_response(classes[np.argmax(preds)], str(preds[0][np.argmax(preds)])), cls=EnhancedJSONEncoder,
+    ))
 
+    return response
+
+
+import dataclasses, json
+
+class EnhancedJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        return super().default(o)
 
 if __name__ == '__main__':
     app.run()
