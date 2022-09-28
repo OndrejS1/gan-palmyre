@@ -1,8 +1,10 @@
+import dataclasses
+import json
+
 import cv2
 import flask
 import numpy as np
 import tensorflow as tf
-import dataclasses, json
 from IPython.display import Image
 from PIL import Image
 from tensorflow.python.keras.models import model_from_json
@@ -27,7 +29,7 @@ def predict():
     architecture = "static/handwritten_model_v3_color.json"
     weights = "static/handwritten_model_v3_color.h5"
 
-    return predictWithSpecifiedWeightAndArchitecture(architecture, weights)
+    return predict_with_weight_and_architecture(architecture, weights, 100)
 
 
 # predict by using handwritten model
@@ -40,10 +42,10 @@ def predict():
     architecture = "static/photo_gan2.json"
     weights = "static/photo_gan2.h5"
 
-    return predictWithSpecifiedWeightAndArchitecture(architecture, weights)
+    return predict_with_weight_and_architecture(architecture, weights, 28)
 
-def predictWithSpecifiedWeightAndArchitecture(architecture, weights):
 
+def predict_with_weight_and_architecture(architecture, weights, img_size):
     classes = "static/classes_all.txt"
     # loading trained model architecture and weights from saved file
     json_file = open(architecture, 'r')
@@ -56,7 +58,7 @@ def predictWithSpecifiedWeightAndArchitecture(architecture, weights):
     classes = eval(open(classes, 'r').read())
     file = flask.request.files['inputFile']
     img = Image.open(file.stream)
-    img = img.resize((100, 100), Image.BILINEAR)
+    img = img.resize((img_size, img_size), Image.BILINEAR)
     img = np.array(img)
     img = cv2.cvtColor(img, cv2.COLOR_RGBA2BGR)
     img = np.array(img)
