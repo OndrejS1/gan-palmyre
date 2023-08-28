@@ -37,8 +37,9 @@ def predict_handwritten():
     # used for passing arguments to script
     architecture = "static/handwritten_model_v3_color.json"
     weights = "static/handwritten_model_v3_color.h5"
+    classes = "static/handwritten_classes.txt"
 
-    prediction = predict_with_weight_and_architecture(architecture, weights, 28)
+    prediction = predict_with_weight_and_architecture(architecture, weights, classes, 28)
 
     return prediction
 
@@ -53,16 +54,16 @@ def predict():
     # used for passing arguments to script
     architecture = "static/photo_gan2.json"
     weights = "static/photo_gan2.h5"
+    classes = "static/photo_classes.txt"
 
-    result = predict_with_weight_and_architecture(architecture, weights, 100)
+    result = predict_with_weight_and_architecture(architecture, weights, classes, 100)
 
     print(result)
 
     return make_response(result, 200)
 
 
-def predict_with_weight_and_architecture(architecture, weights, img_size):
-    classes = "static/classes_all.txt"
+def predict_with_weight_and_architecture(architecture, weights, classes, img_size):
     # loading trained model architecture and weights from saved file
     json_file = open(architecture, 'r')
     loaded_model_json = json_file.read()
@@ -105,6 +106,10 @@ def predict_with_weight_and_architecture(architecture, weights, img_size):
 
     identified_class_3 = classes[sorted_result[2][0]]
     probability_3 = str(sorted_result[2][1])
+
+    print(  {'class': identified_class_1, 'probability': probability_1},
+            {'class': identified_class_2, 'probability': probability_2},
+            {'class': identified_class_3, 'probability': probability_3})
 
     return [
         {'class': identified_class_1, 'probability': probability_1},
