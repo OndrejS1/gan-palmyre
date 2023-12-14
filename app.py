@@ -63,49 +63,59 @@ def predict():
     return make_response(result, 200)
 
 
-def predict_with_weight_and_architecture(architecture, weights, classes_file, img_size):
-    # Loading trained model architecture and weights from saved file
-    with open(architecture, 'r') as json_file:
-        loaded_model_json = json_file.read()
-
+def predict_with_weight_and_architecture(architecture, weights, classes, img_size):
+    # loading trained model architecture and weights from saved file
+    json_file = open(architecture, 'r')
+    loaded_model_json = json_file.read()
+    json_file.close()
     loaded_model = model_from_json(loaded_model_json)
     loaded_model.load_weights(weights)
 
-    # Open Class labels dictionary
-    with open(classes_file, 'r') as class_file:
-        classes = eval(class_file.read())
-
+    # file = flask.request.files['inputFile']
+    # img = Image.open(file.stream)
+    # Open Class labels dictionary. (human readable label given ID, alphabetically ordered, just as the classes were trained)
+    classes = eval(open(classes, 'r').read())
     print(request.form['imageBase64'])
     image_data = re.sub('^data:image/.+;base64,', '', request.form['imageBase64'])
-
     img = Image.open(BytesIO(base64.b64decode(image_data)))
     img.save("input" + str(randrange(1000)) + "__" + str(img_size) + "x" + str(img_size) + ".png")
-
+    # img = img.resize((img_size, img_size), Image.BILINEAR)
     img = np.array(img)
     img = cv2.bitwise_not(img)
+    img = cv2.cvtColor(img, cv2.COLOR_RGBA2BGR)
 
-    # Convert to grayscale
-    img = cv2.cvtColor(img, cv2.COLOR_RGBA2GRAY)
-
-    # Formatting and normalizing the image for the neural network
-    img = img.reshape((1, img_size, img_size, 1))
+    # changing format to neural network readable and normalisation
+    img = img.reshape((1, img.shape[0], img.shape[1], img.shape[2]))
     img = img.astype('float32') / 255
 
-    # Running prediction on test image
+    # running prediction on test image
     preds = loaded_model.predict(img)
 
     pred_result = dict(zip(range(len(preds[0])), preds[0]))
+
     sorted_result = sorted(pred_result.items(), key=operator.itemgetter(1), reverse=True)
 
-    results = []
-    for i in range(min(3, len(sorted_result))):
-        identified_class = classes[sorted_result[i][0]]
-        probability = str(sorted_result[i][1])
-        results.append({'class': identified_class, 'probability': probability})
+    # print(preds)
+    # print(np.argmax(preds[0], axis=0))
 
-    print(*results, sep="\n")
+    identified_class_1 = classes[sorted_result[0][0]]
+    probability_1 = str(sorted_result[0][1])
 
-    return results
+    identified_class_2 = classes[sorted_result[1][0]]
+    probability_2 = str(sorted_result[1][1])
+
+    identified_class_3 = classes[sorted_result[2][0]]
+    probability_3 = str(sorted_result[2][1])
+
+    print(  {'class': identified_class_1, 'probability': probability_1},
+            {'class': identified_class_2, 'probability': probability_2},
+            {'class': identified_class_3, 'probability': probability_3})
+
+    return [
+        {'class': identified_class_1, 'probability': probability_1},
+        {'class': identified_class_2, 'probability': probability_2},
+        {'class': identified_class_3, 'probability': probability_3}
+    ]
 
 
 if __name__ == '__main__':
