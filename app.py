@@ -256,31 +256,35 @@ def load_and_remove_image(image_path):
 @app.route("/convert-augmented", methods=['POST'])
 @cross_origin()
 def convert_augmented():
-    try:
-        class_names = read_class_names_from_file("static/class_list_polygons.txt")
-        model = YOLO('static/multiclass_v21_best.pt')
-        img = extract_image_from_request()
-        remove_file_with_pattern()
-        results = model.predict(source=img, imgsz=(img.height, img.width), save=True, save_txt=True)
+    class_names = read_class_names_from_file("static/class_list_polygons.txt")
+    model = YOLO('static/multiclass_v21_best.pt')
+    img = extract_image_from_request()
 
-        polygons = extract_polygons_from_file('runs/segment/predict/labels.txt')
+    # img is already a PIL image, no need to open it again
+    opencv_image = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
-        sorted_polygons_rows = sort_polygons_in_rows(polygons)
+    file_path = 'static/output_image.png'
+    # Save using OpenCV
+    cv2.imwrite(file_path, opencv_image)
+    results = model.predict(source=file_path, save=True, save_txt=True)
+    polygons = extract_polygons_from_file('runs/segment/predict/labels/output_image.txt')
 
-        response = [[]]
+    load_and_remove_image(file_path)
+    remove_file_with_pattern()
 
-        for i, row in enumerate(sorted_polygons_rows):
-            response.append([class_names[p['class_index']] for p in row])
+    sorted_polygons_rows = sort_polygons_in_rows(polygons)
 
-        sorted_polygons = [p for row in sorted_polygons_rows for p in row]
-        visualize_polygons(sorted_polygons, class_names)
+    response = [[]]
 
-        augmented_image = load_and_remove_image('static/augmented/Fig1.png')
-        return make_convert_augmented_response(response, augmented_image)
-    except Exception as e:
-        print(f"Error: {e}")
-        return "An error occurred.", 500
+    for i, row in enumerate(sorted_polygons_rows):
+        response.append([class_names[p['class_index']] for p in row])
+
+    sorted_polygons = [p for row in sorted_polygons_rows for p in row]
+    visualize_polygons(sorted_polygons, class_names)
+
+    augmented_image = load_and_remove_image('static/augmented/Fig1.png')
+    return make_convert_augmented_response(response, augmented_image)
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
