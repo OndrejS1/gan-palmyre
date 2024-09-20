@@ -86,11 +86,13 @@ def predict_with_weight_and_architecture(architecture, weights, classes_file, im
     img = img.resize((img_size, img_size), Image.BILINEAR)
     img = np.array(img)
 
-    # Ensure the image has 3 channels (BGR format)
-    if img.shape[-1] == 4:  # Convert RGBA to BGR
-        img = cv2.cvtColor(img, cv2.COLOR_RGBA2BGR)
-    elif img.shape[-1] == 1:  # Convert grayscale to BGR if needed
-        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    if img.shape[-1] == 3:  # Convert RGB to Grayscale
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    elif img.shape[-1] == 4:  # Convert RGBA to Grayscale
+        img = cv2.cvtColor(img, cv2.COLOR_RGBA2GRAY)
+
+# Add the necessary channel dimension (1 for grayscale)
+    img = np.expand_dims(img, axis=-1)
 
     # Normalize the image
     img = img.astype('float32') / 255
